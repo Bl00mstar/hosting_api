@@ -11,9 +11,42 @@ const MovieSchema = new Schema({
     type: String,
     required: true,
   },
-  filename: {
+  fullPlot: {
     type: String,
-    required: true,
+  },
+  poster: {
+    type: String,
+  },
+  thumbnail: {
+    type: String,
+  },
+  rated: {
+    type: String,
+  },
+  language: [String], // english, German
+  cast: [String], // Leonardo da Caprio,
+  directors: [String],
+  genres: [String],
+  runtime: {
+    type: Number,
+  },
+  released: {
+    type: Date,
+  },
+  year: {
+    type: Number,
+  },
+  imdb: {
+    type: Number,
+  },
+  videoType: {
+    type: String,
+  },
+  fileName: {
+    type: String,
+  },
+  categorised: {
+    type: String,
   },
 });
 

@@ -28,19 +28,13 @@ const UserSchema = new Schema({
   membershipEndDate: {
     type: Date,
   },
-  wishlist: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: "Movie",
-    },
-  ],
   profiles: [
     {
       title: {
-        type: String, // Jayanta
+        type: String,
       },
       category: {
-        type: String, // Adult / Kids
+        type: String,
       },
       choice: [String],
     },
