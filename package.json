@@ -2,10 +2,10 @@
   "name": "nodejs_streaming_api",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "app.js",
   "scripts": {
     "test": "./node_modules/.bin/mocha",
-    "start": "nodemon server.js"
+    "start": "nodemon app.js"
   },
   "repository": {
     "type": "git",
@@ -18,7 +18,14 @@
   },
   "homepage": "https://github.com/Bl00mstar/nodejs_streaming_api#readme",
   "dependencies": {
+    "config": "^3.3.3",
+    "cookie-parser": "^1.4.5",
+    "cors": "^2.8.5",
     "express": "^4.17.1",
-    "mocha": "^8.2.1"
+    "express-validator": "^6.9.2",
+    "jsonwebtoken": "^8.5.1",
+    "mocha": "^8.2.1",
+    "mongoose": "^5.11.13",
+    "nodemon": "^2.0.7"
   }
 }
