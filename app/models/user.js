@@ -9,6 +9,7 @@ const UserSchema = new Schema({
   },
   lastName: {
     type: String,
+    required: true,
   },
   email: {
     type: String,
@@ -18,27 +19,6 @@ const UserSchema = new Schema({
     type: String,
     required: true,
   },
-  membership: {
-    type: Schema.Types.ObjectId,
-    ref: "Plan",
-  },
-  membershipStartDate: {
-    type: Date,
-  },
-  membershipEndDate: {
-    type: Date,
-  },
-  profiles: [
-    {
-      title: {
-        type: String,
-      },
-      category: {
-        type: String,
-      },
-      choice: [String],
-    },
-  ],
 });
 
 module.exports = mongoose.model("User", UserSchema);

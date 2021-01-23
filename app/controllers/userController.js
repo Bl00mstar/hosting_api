@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 const config = require("config");
 
 const User = require("../models/user");
-const Movie = require("../models/movie");
+const File = require("../models/file");
 
 /** Public access*/
 exports.onSignup = (req, res, next) => {
