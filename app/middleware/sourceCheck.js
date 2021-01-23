@@ -3,6 +3,5 @@ module.exports = (req, res, next) => {
   if (authorization !== undefined) {
     req.headers["Authorization"] = `Bearer ${authorization}`;
   }
-  console.log(authorization);
   next();
 };
