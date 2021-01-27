@@ -3,6 +3,8 @@ const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const config = require("config");
+const uuid = require("uuid");
+const fs = require("fs");
 
 const User = require("../models/user");
 const File = require("../models/file");
@@ -10,12 +12,12 @@ const File = require("../models/file");
 /** Public access*/
 exports.onSignup = (req, res, next) => {
   const errors = validationResult(req);
+
   if (!errors.isEmpty()) {
-    const err = new Error("Validation Error");
-    err.message = "Email Id already Exist. Please login using your password!";
+    const err = new Error("Email is already taken.");
+    err.statusCode = 422;
     err.data = errors.array();
-    next(err);
-    return;
+    throw err;
   }
 
   let email = req.body.email;
@@ -31,20 +33,17 @@ exports.onSignup = (req, res, next) => {
         firstName: firstName,
         lastName: lastName,
         password: hashPassword,
-        membership: null,
-        membershipStartDate: null,
-        membershipEndDate: null,
-        profiles: [
-          {
-            title: firstName,
-            category: "Adult",
-            choice: null,
-          },
-        ],
+        rootFolder: uuid.v4(),
       });
       return user.save();
     })
     .then((result) => {
+      let path = "./files/upload/";
+      if (!fs.existsSync(path + result.rootFolder)) {
+        fs.mkdirSync(path + result.rootFolder);
+        fs.mkdirSync(path + result.rootFolder + "/storage");
+        fs.mkdirSync(path + result.rootFolder + "/trash");
+      }
       res.status(201).json({ msg: "Signup Successfully!", userId: result._id });
     })
     .catch((err) => {
@@ -61,14 +60,13 @@ exports.onLogin = (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    const err = new Error("Validation Error");
+    const err = new Error("Invalid email or password.");
     err.statusCode = 422;
     err.data = errors.array();
     throw err;
   }
 
-  let email = req.body.email;
-  let password = req.body.password;
+  const { email, password } = req.body;
   let loginUser = null;
   User.findOne({ email: email })
     .then((user) => {
@@ -82,7 +80,7 @@ exports.onLogin = (req, res, next) => {
     })
     .then((result) => {
       if (!result) {
-        const err = new Error("Passwod does not match!");
+        const err = new Error("Email or password is valid.");
         err.statusCode = 401;
         throw err;
       }
@@ -153,7 +151,28 @@ exports.onMockLogin = (req, res, next) => {
     });
 };
 /** Private access*/
+exports.isAuthenticated = (req, res, next) => {
+  const userId = req.userId;
+  User.findOne({ _id: userId })
+    .then((data) => {
+      const authorization = req.get("Authorization");
+      const token = authorization.split(" ")[1];
+      console.log(token);
+      console.log(data);
 
+      res.status(200).json({
+        email: data.email,
+        token: token,
+      });
+    })
+    .catch((err) => {
+      console.log(err);
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
 //mock
 exports.onDeleteAccount = (req, res, next) => {
   const userId = req.userId;

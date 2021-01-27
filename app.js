@@ -17,17 +17,13 @@ app.use(bodyParser.json({ extended: false }));
 app.use(cors());
 app.use(cookieParser());
 
-app.use(
-  "/videos",
-  express.static(path.join(__dirname + "/files/", "s3_videos"))
-);
+app.use("/upload", express.static(path.join(__dirname + "/files/", "upload")));
 
 // app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
 app.use("/file", fileRoutes);
 
 app.use((error, req, res, next) => {
-  //   console.log(error);
   const status = error.statusCode || 500;
   const message = error.message;
   const data = error.data;

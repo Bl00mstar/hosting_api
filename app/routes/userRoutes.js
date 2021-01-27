@@ -45,6 +45,8 @@ router.post(
   userController.onLogin
 );
 
+router.get("/auth", auth, userController.isAuthenticated);
+
 router.post(
   "/mock-login",
   [
@@ -64,7 +66,7 @@ router.delete("/:id", auth, userController.onDeleteAccount);
  * Handle Error
  */
 router.use("/", (req, res, next) => {
-  const newErr = Error("Please Login to access User Resources");
+  const newErr = Error("Not Found");
   newErr.statusCode = 403;
   next(newErr);
 });
