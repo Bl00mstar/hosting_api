@@ -2,13 +2,16 @@ const User = require("../models/user");
 const glob = require("glob");
 
 exports.getFiles = async (req, res, next) => {
+  const { path } = req.body;
   const userId = req.userId;
   User.findOne({ _id: userId })
     .then((data) => {
       let userPath = "files/upload/" + data.rootFolder;
       let filesList = [];
       let directoriesList = [];
-      glob(userPath + "/storage/*", { mark: true }, function (err, files) {
+      let storage = userPath + "/storage" + path + "*";
+      console.log(storage);
+      glob(storage, { mark: true }, function (err, files) {
         if (err) {
           console.log(err);
         } else {

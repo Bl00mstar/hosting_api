@@ -6,7 +6,7 @@ const fileController = require("../controllers/fileController");
 
 //file/create
 //file/upload
-router.get("/", auth, fileController.getFiles);
+router.post("/", auth, fileController.getFiles);
 router.get("/trash", auth, fileController.getTrash);
 // router.post("/folder/create", auth, fileController.createFolder);
 // router.post("/folder/delete", auth, fileController.createFolder);
