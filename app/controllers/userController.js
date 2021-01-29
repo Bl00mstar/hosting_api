@@ -157,8 +157,6 @@ exports.isAuthenticated = (req, res, next) => {
     .then((data) => {
       const authorization = req.get("Authorization");
       const token = authorization.split(" ")[1];
-      console.log(token);
-      console.log(data);
 
       res.status(200).json({
         email: data.email,

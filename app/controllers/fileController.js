@@ -1,5 +1,6 @@
 const User = require("../models/user");
 const glob = require("glob");
+const fs = require("fs");
 
 exports.getFiles = async (req, res, next) => {
   const { path } = req.body;
@@ -10,13 +11,12 @@ exports.getFiles = async (req, res, next) => {
       let filesList = [];
       let directoriesList = [];
       let storage = userPath + "/storage" + path + "*";
-      console.log(storage);
       glob(storage, { mark: true }, function (err, files) {
         if (err) {
           console.log(err);
         } else {
           files.map((el) => {
-            let fileType = el.split("storage/")[1];
+            let fileType = el.split("storage" + path)[1];
             if (fileType.includes("/")) {
               directoriesList.push(fileType);
             } else {
@@ -38,11 +38,13 @@ exports.getFiles = async (req, res, next) => {
     });
 };
 
-exports.createFolder = (req, res, next) => {
+exports.createNewFolder = (req, res, next) => {
   const userId = req.userId;
-  console.log(userId);
   User.findOne({ _id: userId })
-    .then((data) => console.log(data))
+    .then((data) => {
+      let folderPath = data.rootFolder + "/storage";
+      fs.mkdirSync(folderPath + "asd");
+    })
     .catch((err) => {
       if (!err.statusCode) {
         err.statusCode = 500;
@@ -50,7 +52,19 @@ exports.createFolder = (req, res, next) => {
       next(err);
     });
 };
-
+exports.createFolderPattern = (req, res, next) => {};
+exports.createRandomFolder = (req, res, next) => {};
+//     if (!errors.isEmpty()) {
+//       const err = new Error("Email is already taken.");
+//       err.statusCode = 422;
+//       err.data = errors.array();
+//       throw err;
+//           rootFolder: uuid.v4(),
+//         let path = "./files/upload/";
+//         if (!fs.existsSync(path + result.rootFolder)) {
+//           fs.mkdirSync(path + result.rootFolder);
+//           fs.mkdirSync(path + result.rootFolder + "/storage");
+//         res.status(201).json({ msg: "Signup Successfully!", userId: result._id });
 exports.deleteFolder = (req, res, next) => {
   console.log(req);
   const userId = req.userId;
