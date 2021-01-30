@@ -17,11 +17,10 @@ app.use(bodyParser.json({ extended: false }));
 app.use(cors());
 app.use(cookieParser());
 
-app.use("/upload", express.static(path.join(__dirname + "/files/", "upload")));
-
 // app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
 app.use("/file", fileRoutes);
+app.use("/media", require("./app/routes/mediaRoutes"));
 
 app.use((error, req, res, next) => {
   const status = error.statusCode || 500;

@@ -1,22 +1,24 @@
 const User = require("../models/user");
 const glob = require("glob");
 const fs = require("fs");
+const config = require("config");
+const multer = require("multer");
 
 exports.getFiles = async (req, res, next) => {
-  const { path } = req.body;
+  const { values } = req.body;
   const userId = req.userId;
   User.findOne({ _id: userId })
     .then((data) => {
       let userPath = "files/upload/" + data.rootFolder;
       let filesList = [];
       let directoriesList = [];
-      let storage = userPath + "/storage" + path + "*";
+      let storage = userPath + "/storage" + values + "*";
       glob(storage, { mark: true }, function (err, files) {
         if (err) {
           console.log(err);
         } else {
           files.map((el) => {
-            let fileType = el.split("storage" + path)[1];
+            let fileType = el.split("storage" + values)[1];
             if (fileType.includes("/")) {
               directoriesList.push(fileType);
             } else {
@@ -40,17 +42,28 @@ exports.getFiles = async (req, res, next) => {
 
 exports.createNewFolder = (req, res, next) => {
   const userId = req.userId;
-  User.findOne({ _id: userId })
-    .then((data) => {
-      let folderPath = data.rootFolder + "/storage";
-      fs.mkdirSync(folderPath + "asd");
-    })
-    .catch((err) => {
-      if (!err.statusCode) {
-        err.statusCode = 500;
-      }
-      next(err);
-    });
+  console.log(req.body);
+  const { file_text, file_path } = req.body.values;
+  let file_pattern = /^(\w+\.?)*\w+$/;
+  //checkfilepath
+  if (file_pattern.test(file_text)) {
+    User.findOne({ _id: userId })
+      .then((data) => {
+        let path = config.get("storagePath") + data.rootFolder + "/storage";
+        fs.mkdirSync(path + file_path + file_text);
+        res.status(201).json({ msg: "Folder " + file_text + " created!" });
+      })
+      .catch((err) => {
+        if (!err.statusCode) {
+          err.statusCode = 500;
+        }
+        next(err);
+      });
+  } else {
+    const err = new Error({ msg: "Invalid folder name." });
+    err.statusCode = 422;
+    next(err);
+  }
 };
 exports.createFolderPattern = (req, res, next) => {};
 exports.createRandomFolder = (req, res, next) => {};

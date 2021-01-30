@@ -38,7 +38,7 @@ exports.onSignup = (req, res, next) => {
       return user.save();
     })
     .then((result) => {
-      let path = "./files/upload/";
+      let path = config.get("storagePath");
       if (!fs.existsSync(path + result.rootFolder)) {
         fs.mkdirSync(path + result.rootFolder);
         fs.mkdirSync(path + result.rootFolder + "/storage");
