@@ -3,18 +3,25 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const FileSchema = new Schema({
-  title: {
+  fileName: {
     type: String,
     required: true,
   },
-  year: {
-    type: Number,
-  },
-  fileName: {
+  fileId: {
     type: String,
+    required: true,
   },
-  categorised: {
+  filePath: {
     type: String,
+    required: true,
+  },
+  createdAt: {
+    default: Date.now(),
+    type: Date,
+  },
+  userId: {
+    type: String,
+    required: true,
   },
 });
 

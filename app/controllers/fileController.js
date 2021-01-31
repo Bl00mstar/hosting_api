@@ -1,8 +1,8 @@
 const User = require("../models/user");
+const File = require("../models/file");
 const glob = require("glob");
 const fs = require("fs");
 const config = require("config");
-const multer = require("multer");
 
 exports.getFiles = async (req, res, next) => {
   const { values } = req.body;
@@ -10,26 +10,33 @@ exports.getFiles = async (req, res, next) => {
   User.findOne({ _id: userId })
     .then((data) => {
       let userPath = "files/upload/" + data.rootFolder;
-      let filesList = [];
       let directoriesList = [];
       let storage = userPath + "/storage" + values + "*";
-      glob(storage, { mark: true }, function (err, files) {
-        if (err) {
-          console.log(err);
-        } else {
-          files.map((el) => {
-            let fileType = el.split("storage" + values)[1];
-            if (fileType.includes("/")) {
-              directoriesList.push(fileType);
-            } else {
-              filesList.push(fileType);
-            }
-          });
-          res.status(200).json({
-            files: filesList,
-            directories: directoriesList,
-          });
-        }
+      File.find({ userId: userId, filePath: values }).then((data) => {
+        let fileInfo = data.map((el) => {
+          console.log(el);
+          return {
+            fileId: el.fileId,
+            fileName: el.fileName,
+            fileDate: el.createdAt,
+          };
+        });
+        glob(storage, { mark: true }, function (err, files) {
+          if (err) {
+            console.log(err);
+          } else {
+            files.map((el) => {
+              let fileType = el.split("storage" + values)[1];
+              if (fileType.includes("/")) {
+                directoriesList.push(fileType);
+              }
+            });
+            res.status(200).json({
+              files: fileInfo,
+              directories: directoriesList,
+            });
+          }
+        });
       });
     })
     .catch((err) => {
@@ -42,7 +49,6 @@ exports.getFiles = async (req, res, next) => {
 
 exports.createNewFolder = (req, res, next) => {
   const userId = req.userId;
-  console.log(req.body);
   const { file_text, file_path } = req.body.values;
   let file_pattern = /^(\w+\.?)*\w+$/;
   //checkfilepath
@@ -67,17 +73,6 @@ exports.createNewFolder = (req, res, next) => {
 };
 exports.createFolderPattern = (req, res, next) => {};
 exports.createRandomFolder = (req, res, next) => {};
-//     if (!errors.isEmpty()) {
-//       const err = new Error("Email is already taken.");
-//       err.statusCode = 422;
-//       err.data = errors.array();
-//       throw err;
-//           rootFolder: uuid.v4(),
-//         let path = "./files/upload/";
-//         if (!fs.existsSync(path + result.rootFolder)) {
-//           fs.mkdirSync(path + result.rootFolder);
-//           fs.mkdirSync(path + result.rootFolder + "/storage");
-//         res.status(201).json({ msg: "Signup Successfully!", userId: result._id });
 exports.deleteFolder = (req, res, next) => {
   console.log(req);
   const userId = req.userId;
