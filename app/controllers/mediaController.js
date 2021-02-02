@@ -8,55 +8,24 @@ const fs = require("fs");
 const uuid = require("uuid");
 const path = require("path");
 const uploadPath = path.resolve(__dirname, "../../files/upload");
+const { getPath } = require("../utils/userPath");
 
 module.exports = (media) => {
   //
-  // Delete file
+  //  download file
   //
-  router.route("/delete/:fileId").get(async (req, res, next) => {
-    const userId = req.userId;
-    let userPath = await User.findOne({ _id: userId }).then((data) => {
-      return data.rootFolder;
-    });
-    let filePath = uploadPath + "/" + userPath + "/storage";
-    const { fileId } = req.params;
-    try {
-      const fileInfo = await File.findOne({ fileId: fileId })
-        .then((data) => {
-          return { path: data.filePath, name: data.fileName };
-        })
-        .catch((err) => console.log(err));
-
-      File.deleteOne({ fileId: fileId })
-        .then((data) => {
-          if (data.ok) {
-            fs.unlinkSync(filePath + fileInfo.path + fileInfo.name);
-            res.status(200).json({ msg: "File deleted" });
-          }
-        })
-        .catch((err) => console.log(err));
-    } catch (error) {
-      if (!error.statusCode) {
-        error.statusCode = 500;
-      }
-      next(error);
-    }
-  });
-  //
-  //  Download file
-  //
-
   router.route("/file/:fileId").get(async (req, res, next) => {
-    const userId = req.userId;
-    let userPath = await User.findOne({ _id: userId }).then((data) => {
-      return data.rootFolder;
-    });
-    let filePath = uploadPath + "/" + userPath + "/storage";
-    const { fileId } = req.params;
     try {
+      const userId = req.userId;
+      const userPath = await User.findOne({ _id: userId }).then((data) => {
+        return data.rootFolder;
+      });
+      const { fileId } = req.params;
+      const userStorage = getPath(data.rootFolder, "/storage");
+      const filePath = userStorage + userPath + req.file.originalname;
       File.findOne({ fileId: fileId })
         .then((data) => {
-          res.download(filePath + data.filePath + data.fileName);
+          res.download(filePath + data.path + data.name);
         })
         .catch((err) => console.log(err));
     } catch (error) {
@@ -66,34 +35,29 @@ module.exports = (media) => {
       next(error);
     }
   });
+  //
+  // upload file
+  //
 
-  //
-  // Upload file
-  //
   router.route("/").post(media.single("file"), (req, res, next) => {
-    const { userPath } = req.body;
-    const userId = req.userId;
     try {
+      const { userPath } = req.body;
+      const userId = req.userId;
       User.findOne({ _id: userId }).then((data) => {
-        let filePath =
-          config.get("storagePath") +
-          data.rootFolder +
-          "/storage" +
-          userPath +
-          req.file.originalname;
-
+        let userStorage = getPath(data.rootFolder, "/storage");
+        let filePath = userStorage + userPath + req.file.originalname;
         fs.writeFileSync(
           filePath,
           Buffer.from(new Uint8Array(req.file.buffer))
         );
-
         const file = new File({
-          fileName: req.file.originalname,
-          fileId: uuid.v4(),
-          filePath: userPath,
+          name: req.file.originalname,
+          id: uuid.v4(),
+          path: userPath,
           userId: userId,
+          trash: false,
+          type: "file",
         });
-
         file.save().then(() => {
           res.status(200).json({ file: file });
         });

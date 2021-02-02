@@ -3,15 +3,15 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const FileSchema = new Schema({
-  fileName: {
+  name: {
     type: String,
     required: true,
   },
-  fileId: {
+  id: {
     type: String,
     required: true,
   },
-  filePath: {
+  path: {
     type: String,
     required: true,
   },
@@ -20,6 +20,14 @@ const FileSchema = new Schema({
     type: Date,
   },
   userId: {
+    type: String,
+    required: true,
+  },
+  trash: {
+    default: false,
+    type: Boolean,
+  },
+  type: {
     type: String,
     required: true,
   },
