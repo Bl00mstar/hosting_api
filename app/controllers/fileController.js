@@ -8,11 +8,11 @@ const fs = require("fs");
 const uuid = require("uuid");
 const path = require("path");
 const uploadPath = path.resolve(__dirname, "../../files/upload");
-const { getPath } = require("../utils/userPath");
+const { getPath, getExtension } = require("../utils/userPath");
 
-module.exports = (files) => {
+module.exports = () => {
   //
-  //  TRASH MANAGEMENT
+  // trash folder list
   //
   router.route("/trash").get(async (req, res, next) => {
     try {
@@ -21,7 +21,6 @@ module.exports = (files) => {
         const searchedItems = await Promise.all(
           data.map((el) => {
             return new Promise((resolve, reject) => {
-              console.log(el);
               resolve({
                 type: el.type,
                 id: el.id,
@@ -44,9 +43,35 @@ module.exports = (files) => {
       next(error);
     }
   });
+
+  //
+  // trash restore file/s
+  //
   router.route("/trash/restore").post(async (req, res, next) => {
     try {
-      console.log("trashrestore");
+      const userId = req.userId;
+      let userPath = await User.findOne({ _id: userId }).then((data) => {
+        return data.rootFolder;
+      });
+      let userStorage = getPath(userPath, "/storage");
+      let trashStorage = getPath(userPath, "/trash");
+      let items = req.body.values.items;
+      const itemsToRestore = items.map((el) => {
+        return new Promise((resolve, reject) => {
+          File.updateOne({ id: el.id }, { $set: { trash: false, path: "/" } })
+            .then(() => {
+              fs.renameSync(
+                trashStorage + "/" + item.name,
+                userStorage + path + item.name
+              );
+              resolve();
+            })
+            .catch((err) => reject(err));
+        });
+      });
+      Promise.all(itemsToRestore)
+        .then(() => res.json({ msg: "Items restored." }))
+        .catch((err) => next(err));
     } catch (error) {
       if (!error.statusCode) {
         error.statusCode = 500;
@@ -54,9 +79,14 @@ module.exports = (files) => {
       next(error);
     }
   });
+
+  //
+  // trash files perm delete
+  //
   router.route("/trash/delete").post(async (req, res, next) => {
     try {
       console.log("trashdelete");
+      console.log(req.body);
     } catch (error) {
       if (!error.statusCode) {
         error.statusCode = 500;
@@ -65,7 +95,7 @@ module.exports = (files) => {
     }
   });
   //
-  //  FILES MANAGEMENT
+  // file list
   //
   router.route("/").post(async (req, res, next) => {
     try {
@@ -99,6 +129,9 @@ module.exports = (files) => {
       next(error);
     }
   });
+  //
+  // create new folder
+  //
   router.route("/createNewFolder").post(async (req, res, next) => {
     const userId = req.userId;
     const { file_text, file_path } = req.body.values;
@@ -140,7 +173,7 @@ module.exports = (files) => {
     }
   });
   //
-  //  FOLDER MANAGEMENT
+  // create random named folders
   //
   router.route("/createRandomFolder").post(async (req, res, next) => {
     try {
@@ -152,6 +185,9 @@ module.exports = (files) => {
       next(error);
     }
   });
+  //
+  // create folders by patter
+  //
   router.route("/createPatternFolder").post(async (req, res, next) => {
     try {
       console.log("create folder");
@@ -162,41 +198,40 @@ module.exports = (files) => {
       next(error);
     }
   });
+
   //
-  //  ITEM MANAGEMENT
+  // files move to trash, folders delete
   //
   router.route("/delete").post(async (req, res, next) => {
     try {
-      const { files, folders, path } = req.body.values;
       const userId = req.userId;
       let userPath = await User.findOne({ _id: userId }).then((data) => {
         return data.rootFolder;
       });
-      let itemPath = uploadPath + "/" + userPath + "/storage" + path;
-      let trashPath = uploadPath + "/" + userPath + "/trash/";
-      console.log(files);
-      console.log(folders);
-      if (typeof folders !== "undefined" && folders.length > 0) {
-        console.log("fodlders");
-      }
-      if (typeof files !== "undefined" && files.length > 0) {
-        console.log("files");
-        console.log(files.length);
-        //delete from mongo file
-        //move to trash
-        const deletedFiles = files.map((el) => {
-          return new Promise((resolve, reject) => {
-            console.log(el.name);
-            console.log(el.id);
-            File.updateOne({ fileId: el.id }, { $set: { trash: true } })
-              .then(() => resolve())
+      let userStorage = getPath(userPath, "/storage");
+      let trashStorage = getPath(userPath, "/trash");
+      let items = req.body.values.items;
+      const itemsToDelete = items.map((el) => {
+        return new Promise((resolve, reject) => {
+          if (el.type === "folder") {
+            console.log("folder");
+          } else if (el.type === "file") {
+            console.log("s");
+            File.updateOne({ id: el.id }, { $set: { trash: true, path: "/" } })
+              .then(() => {
+                fs.renameSync(
+                  userStorage + path + item.name,
+                  trashStorage + "/" + newName
+                );
+                resolve();
+              })
               .catch((err) => reject(err));
-          });
+          }
         });
-        Promise.all(deletedFiles)
-          .then(() => res.json({ msg: "Files moved." }))
-          .catch((err) => console.log(err));
-      }
+      });
+      Promise.all(itemsToDelete)
+        .then(() => res.json({ msg: "Items deleted." }))
+        .catch((err) => next(err));
     } catch (error) {
       if (!error.statusCode) {
         error.statusCode = 500;
@@ -204,31 +239,41 @@ module.exports = (files) => {
       next(error);
     }
   });
-  router.route("/renameItem").post(async (req, res, next) => {
+
+  //
+  // rename file/folder
+  //
+  router.route("/rename").post(async (req, res, next) => {
     try {
+      const { newName, item, path } = req.body.values;
       const userId = req.userId;
       let userPath = await User.findOne({ _id: userId }).then((data) => {
         return data.rootFolder;
       });
-      const { newName, item, path } = req.body.values;
-      const oldItem = req.body.values.item.item;
-      let changePath = uploadPath + "/" + userPath + "/storage" + path;
+      let userStorage = getPath(userPath, "/storage");
       if (item.type === "folder") {
-        fs.renameSync(changePath + oldItem, changePath + newName);
-        res.status(200).json({ msg: "Folder renamed." });
+        File.updateOne({ id: item.id }, { $set: { name: newName } })
+          .then(() => {
+            fs.renameSync(
+              userStorage + path + item.name,
+              userStorage + path + newName
+            );
+            res.status(200).json({ msg: "Folder renamed." });
+          })
+          .catch((err) => next(err));
       } else if (item.type === "file") {
-        let splitExtension = oldItem.name.split(".");
-        let getExtension = splitExtension.pop();
         File.updateOne(
-          { fileId: oldItem.id },
-          { $set: { fileName: newName + "." + getExtension } }
-        ).then(() => {
-          fs.renameSync(
-            changePath + oldItem.name,
-            changePath + newName + "." + getExtension
-          );
-          res.status(200).json({ msg: "File renamed." });
-        });
+          { id: item.id },
+          { $set: { name: newName + "." + getExtension(item) } }
+        )
+          .then(() => {
+            fs.renameSync(
+              userStorage + path + item.name,
+              userStorage + path + newName
+            );
+            res.status(200).json({ msg: "File renamed." });
+          })
+          .catch((err) => next(err));
       }
     } catch (error) {
       if (!error.statusCode) {

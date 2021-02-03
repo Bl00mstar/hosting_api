@@ -1,33 +1,28 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
-const config = require("config");
 const User = require("../models/user");
 const File = require("../models/file");
 const fs = require("fs");
 const uuid = require("uuid");
-const path = require("path");
-const uploadPath = path.resolve(__dirname, "../../files/upload");
 const { getPath } = require("../utils/userPath");
 
 module.exports = (media) => {
   //
-  //  download file
+  // download file
   //
-  router.route("/file/:fileId").get(async (req, res, next) => {
+  router.route("/:fileId").get(async (req, res, next) => {
     try {
+      const { fileId } = req.params;
       const userId = req.userId;
       const userPath = await User.findOne({ _id: userId }).then((data) => {
         return data.rootFolder;
       });
-      const { fileId } = req.params;
-      const userStorage = getPath(data.rootFolder, "/storage");
-      const filePath = userStorage + userPath + req.file.originalname;
-      File.findOne({ fileId: fileId })
+      const userStorage = getPath(userPath, "/storage");
+      File.findOne({ id: fileId, userId: userId })
         .then((data) => {
-          res.download(filePath + data.path + data.name);
+          res.download(userStorage + data.path + data.name);
         })
-        .catch((err) => console.log(err));
+        .catch((err) => next(err));
     } catch (error) {
       if (!error.statusCode) {
         error.statusCode = 500;
@@ -38,7 +33,6 @@ module.exports = (media) => {
   //
   // upload file
   //
-
   router.route("/").post(media.single("file"), (req, res, next) => {
     try {
       const { userPath } = req.body;

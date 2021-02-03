@@ -1,5 +1,5 @@
 {
-  "mongoURI": "mongodb://useMongoTest:UsEmOnGoPaSs@localhost:27017/",
+  "mongoURI": "mongodb://useMongoTest:UsEmOnGoPaSs@localhost:27017/admin",
   "APP_KEY": "secrett",
   "TOKEN_EXPIRES_IN": 86400,
   "storagePath": "./files/upload/"
