@@ -8,9 +8,45 @@ const fs = require("fs");
 const uuid = require("uuid");
 const path = require("path");
 const uploadPath = path.resolve(__dirname, "../../files/upload");
-const { getPath, getExtension } = require("../utils/userPath");
+const { getPath, getExtension, getFolders } = require("../utils/userPath");
 
 module.exports = () => {
+  //
+  // get folders
+  //
+  router.route("/folders").get(async (req, res, next) => {
+    try {
+      const userId = req.userId;
+      File.find({ userId: userId, trash: false, type: "folder" }).then(
+        async (data) => {
+          const searched = await Promise.all(
+            data.map((el) => {
+              return new Promise((resolve, reject) => {
+                resolve({
+                  id: el.id,
+                  path: el.path,
+                  name: el.name,
+                });
+              });
+            })
+          );
+
+          Promise.all(searched)
+            .then(() => {
+              let searchedFolders = getFolders(searched);
+              res.json({ searchedFolders });
+            })
+            .catch((err) => next(err));
+        }
+      );
+    } catch (error) {
+      if (!error.statusCode) {
+        error.statusCode = 500;
+      }
+      next(error);
+    }
+  });
+
   //
   // trash folder list
   //
@@ -134,12 +170,18 @@ module.exports = () => {
   //
   router.route("/createNewFolder").post(async (req, res, next) => {
     const userId = req.userId;
+    console.log(req.body.values);
     const { file_text, file_path } = req.body.values;
     let file_pattern = /^(\w+\.?)*\w+$/;
     if (file_pattern.test(file_text)) {
       User.findOne({ _id: userId })
         .then((data) => {
           let userStorage = getPath(data.rootFolder, "/storage");
+          if (fs.existsSync(userStorage + file_path + file_text)) {
+            const err = new Error("Folder already exist.");
+            err.statusCode = 422;
+            next(err);
+          }
           fs.mkdirSync(userStorage + file_path + file_text);
           let folder = new File({
             name: file_text,
@@ -156,11 +198,6 @@ module.exports = () => {
         })
         .catch((err) => {
           console.log(err);
-          if (err.code === "EEXIST") {
-            const err = new Error("Folder already exist.");
-            err.statusCode = 422;
-            next(err);
-          }
           if (!err.statusCode) {
             err.statusCode = 500;
           }
