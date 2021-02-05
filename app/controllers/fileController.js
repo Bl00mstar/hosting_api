@@ -14,31 +14,35 @@ module.exports = () => {
   //
   // get folders
   //
-  router.route("/folders").get(async (req, res, next) => {
+  router.route("/folders").post(async (req, res, next) => {
     try {
+      const { payload } = req.body.values;
       const userId = req.userId;
-      File.find({ userId: userId, trash: false, type: "folder" }).then(
-        async (data) => {
-          const searched = await Promise.all(
-            data.map((el) => {
-              return new Promise((resolve, reject) => {
-                resolve({
-                  id: el.id,
-                  path: el.path,
-                  name: el.name,
-                });
+      console.log(req.body);
+      File.find({
+        userId: userId,
+        trash: false,
+        type: "folder",
+        path: payload,
+      }).then(async (data) => {
+        const searchedFolders = await Promise.all(
+          data.map((el) => {
+            return new Promise((resolve, reject) => {
+              resolve({
+                id: el.id,
+                path: el.path,
+                name: el.name,
               });
-            })
-          );
+            });
+          })
+        );
 
-          Promise.all(searched)
-            .then(() => {
-              let searchedFolders = getFolders(searched);
-              res.json({ searchedFolders });
-            })
-            .catch((err) => next(err));
-        }
-      );
+        Promise.all(searchedFolders)
+          .then(() => {
+            res.json({ searchedFolders });
+          })
+          .catch((err) => next(err));
+      });
     } catch (error) {
       if (!error.statusCode) {
         error.statusCode = 500;
