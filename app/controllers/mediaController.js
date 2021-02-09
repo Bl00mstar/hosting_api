@@ -2,16 +2,18 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/user");
 const File = require("../models/file");
+const Share = require("../models/share");
 const fs = require("fs");
 const uuid = require("uuid");
-const { getPath } = require("../utils/userPath");
+const { getPath, getIp } = require("../utils/userPath");
 
 module.exports = (media) => {
   //
-  // download file
+  // #fix# generate link to download file
   //
   router.route("/:fileId").get(async (req, res, next) => {
     try {
+      const addressIp = getIp(req);
       const { fileId } = req.params;
       const userId = req.userId;
       const userPath = await User.findOne({ _id: userId }).then((data) => {
@@ -20,7 +22,17 @@ module.exports = (media) => {
       const userStorage = getPath(userPath, "/storage");
       File.findOne({ id: fileId, userId: userId })
         .then((data) => {
-          res.download(userStorage + data.path + data.name);
+          console.log(data);
+          let generateLink = new Share({
+            addressIp: addressIp,
+            linkId: uuid.v4(),
+            filePath: userStorage + data.path + data.name,
+            createdAt: Date.now(),
+            expireAt: Date.now() + 40000000,
+          });
+          generateLink.save().then(() => {
+            res.json({ link: generateLink.linkId });
+          });
         })
         .catch((err) => next(err));
     } catch (error) {

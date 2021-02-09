@@ -17,6 +17,17 @@ module.exports = {
       })
       .reduce((children, path) => insert(children, path), []);
   },
+  getIp: (req) => {
+    let addressIp;
+    if (typeof req.headers["x-forwarded-for"] !== "undefined") {
+      addressIp = req.headers["x-forwarded-for"];
+    } else if (typeof req.connection.remoteAddress !== "undefined") {
+      addressIp = req.connection.remoteAddress;
+    } else {
+      addressIp = req.socket.remoteAddress;
+    }
+    return addressIp;
+  },
 };
 
 function insert(children = [], [head, ...tail]) {
