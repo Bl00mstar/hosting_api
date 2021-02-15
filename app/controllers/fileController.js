@@ -12,13 +12,125 @@ const { getPath, getExtension, getFolders } = require("../utils/userPath");
 
 module.exports = () => {
   //
+  // move elements
+
+  router.route("/move").post(async (req, res, next) => {
+    try {
+      const { elements, path } = req.body.values;
+      const userId = req.userId;
+      let userPath = await User.findOne({ _id: userId }).then((data) => {
+        return data.rootFolder;
+      });
+      let userStorage = getPath(userPath, "/storage");
+      File.find({ userId: userId, trash: false, path: path })
+        .then((data) => {
+          const elementValidation = elements.map((el) => {
+            return new Promise((resolve, reject) => {
+              data.map((value) => {
+                if (el.id === value.id) {
+                  const err = new Error("Element is already in folder.");
+                  err.statusCode = 401;
+                  reject(err);
+                }
+              });
+              resolve();
+            });
+          });
+          Promise.all(elementValidation)
+            .then(() => {
+              elements.map((el) => {
+                File.find({
+                  id: el.id,
+                  userId: userId,
+                  trash: false,
+                }).then((data) => {
+                  const moveElements = data.map((value) => {
+                    return new Promise((resolve, reject) => {
+                      if (value.type === "folder") {
+                        File.findOneAndUpdate(
+                          { id: value.id, userId: userId },
+                          { $set: { path: path } }
+                        ).then((data) => {
+                          fs.renameSync(
+                            userStorage + data.path + data.name,
+                            userStorage + path + data.name
+                          );
+                          File.find({
+                            path: { $regex: data.path + data.name + "/.*" },
+                            userId: userId,
+                          }).then((el) => {
+                            el.map((final) => {
+                              let modifyOldPath = final.path
+                                .split(data.path)
+                                .slice(1)
+                                .join("/");
+                              let newPath =
+                                path.slice(0, -1) + "/" + modifyOldPath;
+
+                              File.updateOne(
+                                { id: final.id },
+                                { $set: { path: newPath } }
+                              )
+                                .then(() => {
+                                  resolve();
+                                })
+                                .catch((err) => reject(err));
+                            });
+                          });
+                        });
+                      } else if (value.type === "file") {
+                        File.updateOne(
+                          { id: value.id },
+                          { $set: { path: path } }
+                        )
+                          .then(() => {
+                            fs.renameSync(
+                              userStorage + value.path + value.name,
+                              userStorage + path + value.name
+                            );
+                          })
+                          .then(() => {
+                            resolve();
+                          })
+                          .catch((err) => reject(err));
+                      }
+                    });
+                  });
+                  Promise.all(moveElements)
+                    .then(() => {
+                      res.status(200).json({ msg: "Elements moved." });
+                    })
+                    .catch((err) => {
+                      next(err);
+                    });
+                });
+              });
+            })
+            .catch((err) => next(err));
+        })
+        .catch((err) => {
+          if (!err.statusCode) {
+            err.statusCode = 500;
+          }
+          next(err);
+        });
+    } catch (error) {
+      if (!error.statusCode) {
+        error.statusCode = 500;
+      }
+      next(error);
+    }
+  });
+
+  // router.route('/delete')
+
+  //
   // get folders
   //
   router.route("/folders").post(async (req, res, next) => {
     try {
       const { payload } = req.body.values;
       const userId = req.userId;
-      console.log(req.body);
       File.find({
         userId: userId,
         trash: false,
@@ -257,7 +369,6 @@ module.exports = () => {
           if (el.type === "folder") {
             console.log("folder");
           } else if (el.type === "file") {
-            console.log("s");
             File.updateOne({ id: el.id }, { $set: { trash: true, path: "/" } })
               .then(() => {
                 fs.renameSync(
