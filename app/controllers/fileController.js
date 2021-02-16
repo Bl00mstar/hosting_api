@@ -7,6 +7,7 @@ const File = require("../models/file");
 const fs = require("fs");
 const uuid = require("uuid");
 const path = require("path");
+const rimraf = require("rimraf");
 const uploadPath = path.resolve(__dirname, "../../files/upload");
 const { getPath, getExtension, getFolders } = require("../utils/userPath");
 
@@ -98,7 +99,9 @@ module.exports = () => {
                   });
                   Promise.all(moveElements)
                     .then(() => {
-                      res.status(200).json({ msg: "Elements moved." });
+                      res
+                        .status(200)
+                        .json({ msg: "Elements have been moved." });
                     })
                     .catch((err) => {
                       next(err);
@@ -121,9 +124,6 @@ module.exports = () => {
       next(error);
     }
   });
-
-  // router.route('/delete')
-
   //
   // get folders
   //
@@ -155,90 +155,6 @@ module.exports = () => {
           })
           .catch((err) => next(err));
       });
-    } catch (error) {
-      if (!error.statusCode) {
-        error.statusCode = 500;
-      }
-      next(error);
-    }
-  });
-
-  //
-  // trash folder list
-  //
-  router.route("/trash").get(async (req, res, next) => {
-    try {
-      const userId = req.userId;
-      File.find({ userId: userId, trash: true }).then(async (data) => {
-        const searchedItems = await Promise.all(
-          data.map((el) => {
-            return new Promise((resolve, reject) => {
-              resolve({
-                type: el.type,
-                id: el.id,
-                name: el.name,
-                date: el.createdAt,
-              });
-            });
-          })
-        );
-        Promise.all(searchedItems)
-          .then(() => {
-            res.json({ searchedItems });
-          })
-          .catch((err) => next(err));
-      });
-    } catch (error) {
-      if (!error.statusCode) {
-        error.statusCode = 500;
-      }
-      next(error);
-    }
-  });
-
-  //
-  // trash restore file/s
-  //
-  router.route("/trash/restore").post(async (req, res, next) => {
-    try {
-      const userId = req.userId;
-      let userPath = await User.findOne({ _id: userId }).then((data) => {
-        return data.rootFolder;
-      });
-      let userStorage = getPath(userPath, "/storage");
-      let trashStorage = getPath(userPath, "/trash");
-      let items = req.body.values.items;
-      const itemsToRestore = items.map((el) => {
-        return new Promise((resolve, reject) => {
-          File.updateOne({ id: el.id }, { $set: { trash: false, path: "/" } })
-            .then(() => {
-              fs.renameSync(
-                trashStorage + "/" + item.name,
-                userStorage + path + item.name
-              );
-              resolve();
-            })
-            .catch((err) => reject(err));
-        });
-      });
-      Promise.all(itemsToRestore)
-        .then(() => res.json({ msg: "Items restored." }))
-        .catch((err) => next(err));
-    } catch (error) {
-      if (!error.statusCode) {
-        error.statusCode = 500;
-      }
-      next(error);
-    }
-  });
-
-  //
-  // trash files perm delete
-  //
-  router.route("/trash/delete").post(async (req, res, next) => {
-    try {
-      console.log("trashdelete");
-      console.log(req.body);
     } catch (error) {
       if (!error.statusCode) {
         error.statusCode = 500;
@@ -309,7 +225,9 @@ module.exports = () => {
           folder
             .save()
             .then(
-              res.status(201).json({ msg: "Folder " + file_text + " created!" })
+              res
+                .status(201)
+                .json({ msg: "Folder " + file_text + " have been created!" })
             );
         })
         .catch((err) => {
@@ -363,26 +281,80 @@ module.exports = () => {
       });
       let userStorage = getPath(userPath, "/storage");
       let trashStorage = getPath(userPath, "/trash");
-      let items = req.body.values.items;
-      const itemsToDelete = items.map((el) => {
+      let { items } = req.body.values;
+      const itemsToDelete = items.map((value) => {
         return new Promise((resolve, reject) => {
-          if (el.type === "folder") {
-            console.log("folder");
-          } else if (el.type === "file") {
-            File.updateOne({ id: el.id }, { $set: { trash: true, path: "/" } })
-              .then(() => {
-                fs.renameSync(
-                  userStorage + path + item.name,
-                  trashStorage + "/" + newName
-                );
-                resolve();
+          if (value.type === "folder") {
+            File.findOne({ userId: userId, id: value.id, trash: false })
+              .then((data) => {
+                File.find({
+                  userId: userId,
+                  trash: false,
+                  path: { $regex: data.path + data.name + "/.*" },
+                }).then((el) => {
+                  el.map((filesInRootFolder) => {
+                    if (filesInRootFolder.type === "file") {
+                      File.updateOne(
+                        { id: filesInRootFolder.id },
+                        { $set: { path: "/", trash: true } }
+                      )
+                        .then(() => {
+                          fs.renameSync(
+                            userStorage +
+                              filesInRootFolder.path +
+                              filesInRootFolder.name,
+                            trashStorage + "/" + filesInRootFolder.name
+                          );
+                        })
+                        .then(() => resolve())
+                        .catch((err) => reject(err));
+                    } else if (filesInRootFolder.type === "folder") {
+                      File.deleteOne({
+                        id: filesInRootFolder.id,
+                        userId: userId,
+                      }).catch((err) => reject(err));
+                    }
+                  });
+                });
               })
+              .then(() => {
+                File.findOneAndDelete({
+                  userId: userId,
+                  id: value.id,
+                  trash: false,
+                })
+                  .then((data) => {
+                    rimraf(userStorage + data.path + data.name, () =>
+                      resolve()
+                    );
+                  })
+                  .catch((err) => reject(err));
+              })
+              .catch((err) => reject(err));
+          } else if (value.type === "file") {
+            File.findOneAndUpdate(
+              { id: value.id, userId: userId },
+              { $set: { trash: true, path: "/" } }
+            )
+              .then((data) => {
+                fs.renameSync(
+                  userStorage + data.path + data.name,
+                  trashStorage + "/" + data.name
+                );
+              })
+              .then(() => resolve())
               .catch((err) => reject(err));
           }
         });
       });
       Promise.all(itemsToDelete)
-        .then(() => res.json({ msg: "Items deleted." }))
+        .then(() => {
+          if (items.length > 1) {
+            res.json({ msg: "Items have been deleted." });
+          } else {
+            res.json({ msg: "Item has been deleted." });
+          }
+        })
         .catch((err) => next(err));
     } catch (error) {
       if (!error.statusCode) {
@@ -404,13 +376,16 @@ module.exports = () => {
       });
       let userStorage = getPath(userPath, "/storage");
       if (item.type === "folder") {
-        File.updateOne({ id: item.id }, { $set: { name: newName } })
+        File.updateOne(
+          { id: item.id, userId: userId },
+          { $set: { name: newName } }
+        )
           .then(() => {
             fs.renameSync(
               userStorage + path + item.name,
               userStorage + path + newName
             );
-            res.status(200).json({ msg: "Folder renamed." });
+            res.status(200).json({ msg: "Folder has been renamed." });
           })
           .catch((err) => next(err));
       } else if (item.type === "file") {
@@ -423,7 +398,7 @@ module.exports = () => {
               userStorage + path + item.name,
               userStorage + path + newName
             );
-            res.status(200).json({ msg: "File renamed." });
+            res.status(200).json({ msg: "File has been renamed." });
           })
           .catch((err) => next(err));
       }
