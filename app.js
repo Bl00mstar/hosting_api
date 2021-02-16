@@ -12,6 +12,7 @@ const config = require("config");
 const userRoutes = require("./app/routes/userRoutes");
 const adminRoutes = require("./app/routes/adminRoutes");
 const fileRoutes = require("./app/routes/fileRoutes");
+const trashRoutes = require("./app/routes/trashRoutes");
 const sharedRoutes = require("./app/routes/sharedRoutes");
 
 const app = express();
@@ -22,6 +23,7 @@ app.use(cookieParser());
 // app.use("/admin", adminRoutes);
 app.use("/user", userRoutes);
 app.use("/file", fileRoutes);
+app.use("/trash", trashRoutes);
 app.use("/share", sharedRoutes);
 app.use("/media", require("./app/routes/mediaRoutes"));
 
@@ -34,6 +36,7 @@ app.use((error, req, res, next) => {
 
 mongoose
   .connect(config.get("mongoURI"), {
+    useFindAndModify: false,
     useNewUrlParser: true,
     useCreateIndex: true,
     useUnifiedTopology: true,
