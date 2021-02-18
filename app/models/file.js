@@ -16,8 +16,8 @@ const FileSchema = new Schema({
     required: true,
   },
   createdAt: {
-    default: Date.now(),
     type: Date,
+    required: true,
   },
   userId: {
     type: String,

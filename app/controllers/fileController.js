@@ -168,9 +168,20 @@ module.exports = () => {
   router.route("/").post(async (req, res, next) => {
     try {
       const userId = req.userId;
-      const { values } = req.body;
-      File.find({ userId: userId, path: values, trash: false }).then(
-        async (data) => {
+      const { path, filters } = req.body.values;
+
+      filter = {};
+      filter["type"] = filters.folder.type;
+
+      if (filters.alpha.active) {
+        filter["name"] = filters.alpha.type;
+      } else if (filters.date.active) {
+        filter["createdAt"] = filters.date.type;
+      }
+
+      File.find({ userId: userId, path: path, trash: false })
+        .sort(filter)
+        .then(async (data) => {
           const searchedItems = await Promise.all(
             data.map((el) => {
               return new Promise((resolve, reject) => {
@@ -188,8 +199,7 @@ module.exports = () => {
               res.json({ searchedItems });
             })
             .catch((err) => next(err));
-        }
-      );
+        });
     } catch (error) {
       if (!error.statusCode) {
         error.statusCode = 500;
@@ -219,6 +229,7 @@ module.exports = () => {
             name: file_text,
             id: uuid.v4(),
             path: file_path,
+            createdAt: Date.now(),
             userId: userId,
             type: "folder",
           });

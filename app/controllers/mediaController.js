@@ -60,6 +60,7 @@ module.exports = (media) => {
           name: req.file.originalname,
           id: uuid.v4(),
           path: userPath,
+          createdAt: Date.now(),
           userId: userId,
           trash: false,
           type: "file",
