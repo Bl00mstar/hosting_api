@@ -14,6 +14,7 @@ const adminRoutes = require("./app/routes/adminRoutes");
 const fileRoutes = require("./app/routes/fileRoutes");
 const trashRoutes = require("./app/routes/trashRoutes");
 const sharedRoutes = require("./app/routes/sharedRoutes");
+const streamRoutes = require("./app/routes/streamRoutes");
 
 const app = express();
 app.use(bodyParser.json({ extended: false }));
@@ -25,6 +26,7 @@ app.use("/user", userRoutes);
 app.use("/file", fileRoutes);
 app.use("/trash", trashRoutes);
 app.use("/share", sharedRoutes);
+app.use("/stream", streamRoutes);
 app.use("/media", require("./app/routes/mediaRoutes"));
 
 app.use((error, req, res, next) => {

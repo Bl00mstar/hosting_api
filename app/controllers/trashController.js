@@ -15,6 +15,7 @@ module.exports = () => {
   // Trash files list
   router.route("/").get(async (req, res, next) => {
     try {
+      console.log("asd");
       const userId = req.userId;
       File.find({ userId: userId, trash: true }).then(async (data) => {
         const searchedItems = await Promise.all(
@@ -31,6 +32,7 @@ module.exports = () => {
         );
         Promise.all(searchedItems)
           .then(() => {
+            console.log(searchedItems);
             res.json({ searchedItems });
           })
           .catch((err) => next(err));
