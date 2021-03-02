@@ -19,6 +19,7 @@ const streamRoutes = require("./app/routes/streamRoutes");
 const app = express();
 app.use(bodyParser.json({ extended: false }));
 app.use(cors());
+app.options("*", cors());
 app.use(cookieParser());
 
 // app.use("/admin", adminRoutes);
