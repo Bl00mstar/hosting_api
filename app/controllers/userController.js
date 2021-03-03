@@ -43,6 +43,7 @@ exports.onSignup = (req, res, next) => {
         fs.mkdirSync(path + result.rootFolder);
         fs.mkdirSync(path + result.rootFolder + "/storage");
         fs.mkdirSync(path + result.rootFolder + "/trash");
+        fs.mkdirSync(path + result.rootFolder + "/temp");
       }
       res.status(201).json({ msg: "Signup Successfully!", userId: result._id });
     })
