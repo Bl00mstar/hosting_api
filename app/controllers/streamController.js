@@ -57,7 +57,7 @@ module.exports = () => {
 
   router.route("/movie/3").get((req, res, next) => {
     try {
-      const path = "asd.mkv";
+      const path = "test4.mkv";
       const stat = fs.statSync(path);
       console.log(stat);
       const fileSize = stat.size;

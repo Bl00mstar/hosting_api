@@ -242,7 +242,6 @@ module.exports = () => {
             );
         })
         .catch((err) => {
-          console.log(err);
           if (!err.statusCode) {
             err.statusCode = 500;
           }
@@ -254,33 +253,6 @@ module.exports = () => {
       next(err);
     }
   });
-  //
-  // create random named folders
-  //
-  router.route("/createRandomFolder").post(async (req, res, next) => {
-    try {
-      console.log("create folder");
-    } catch (error) {
-      if (!error.statusCode) {
-        error.statusCode = 500;
-      }
-      next(error);
-    }
-  });
-  //
-  // create folders by patter
-  //
-  router.route("/createPatternFolder").post(async (req, res, next) => {
-    try {
-      console.log("create folder");
-    } catch (error) {
-      if (!error.statusCode) {
-        error.statusCode = 500;
-      }
-      next(error);
-    }
-  });
-
   //
   // files move to trash, folders delete
   //
