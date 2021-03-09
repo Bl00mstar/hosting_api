@@ -55,8 +55,10 @@ module.exports = () => {
     const userId = req.userId;
     try {
       Playlist.findOneAndDelete({ user: userId, _id: id })
-        .then(() => {})
-        .catch((err) => reject(err));
+        .then((data) => {
+          res.json({ msg: data.msg });
+        })
+        .catch((err) => next(err));
     } catch (error) {
       if (!error.statusCode) {
         error.statusCode = 500;
@@ -65,10 +67,20 @@ module.exports = () => {
     }
   });
 
-  router.route("/playlist").put((req, res, next) => {
+  router.route("/:id").put((req, res, next) => {
+    const { id } = req.params;
+    const { newName } = req.body;
+    const userId = req.userId;
     try {
-      const userId = req.userId;
-      console.log("put playlsits");
+      Playlist.findOneAndUpdate(
+        { user: userId, _id: id },
+        { $set: { name: newName } }
+      )
+        .then((data) => {
+          console.log(data);
+          res.json({ msg: "Udated" });
+        })
+        .catch((err) => next(err));
     } catch (error) {
       if (!error.statusCode) {
         error.statusCode = 500;
