@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Playlist = require("../models/playlist");
+const File = require("../models/file");
 
 module.exports = () => {
   router.route("/").get((req, res, next) => {
@@ -78,7 +79,7 @@ module.exports = () => {
       )
         .then((data) => {
           console.log(data);
-          res.json({ msg: "Udated" });
+          res.json({ msg: "Updated" });
         })
         .catch((err) => next(err));
     } catch (error) {
@@ -86,6 +87,22 @@ module.exports = () => {
         error.statusCode = 500;
       }
       next(error);
+    }
+  });
+
+  router.route("/file/:id").get((req, res, next) => {
+    try {
+      const { id } = req.params;
+      const userId = req.userId;
+      File.findOne({ userId: userId, trash: false, id: id, type: "file" })
+        .then((data) => {
+          res.json({
+            msg: { _id: data._id, storage: data.userId, name: data.name },
+          });
+        })
+        .catch((err) => next(err));
+    } catch (error) {
+      console.log("a");
     }
   });
 
