@@ -4,6 +4,70 @@ const Playlist = require("../models/playlist");
 const File = require("../models/file");
 
 module.exports = () => {
+  router.route("/:playlist").get(async (req, res, next) => {
+    try {
+      const { playlist } = req.params;
+      let playlistData = await Playlist.findOne({ _id: playlist }).then(
+        (data) => {
+          return data;
+        }
+      );
+      const filesData = await Promise.all(
+        playlistData.files.map((file) => {
+          return new Promise((resolve, reject) => {
+            File.findOne({ id: file })
+              .then((data) => {
+                resolve({ id: data._id, name: data.name, selector: data.id });
+              })
+              .catch((err) => reject(err));
+          });
+        })
+      );
+      Promise.all(filesData)
+        .then(() => {
+          res.json({ msg: { playlist: playlistData, filesData: filesData } });
+        })
+        .catch((err) => next(err));
+    } catch (error) {
+      if (!error.statusCode) {
+        error.statusCode = 500;
+      }
+      next(error);
+    }
+  });
+
+  router.route("/:playlist/:file").put((req, res, next) => {
+    try {
+      const { playlist, file } = req.params;
+      Playlist.findOneAndUpdate({ _id: playlist }, { $push: { files: file } })
+        .then((data) => {
+          res.json({ msg: data });
+        })
+        .catch((err) => next(err));
+    } catch (error) {
+      if (!error.statusCode) {
+        error.statusCode = 500;
+      }
+      next(error);
+    }
+  });
+
+  router.route("/:playlist/:file").delete((req, res, next) => {
+    try {
+      const { playlist, file } = req.params;
+      Playlist.findOneAndUpdate({ _id: playlist }, { $pull: { files: file } })
+        .then((data) => {
+          res.json({ msg: data });
+        })
+        .catch((err) => next(err));
+    } catch (error) {
+      if (!error.statusCode) {
+        error.statusCode = 500;
+      }
+      next(error);
+    }
+  });
+
   router.route("/").get((req, res, next) => {
     try {
       const userId = req.userId;
@@ -94,15 +158,20 @@ module.exports = () => {
     try {
       const { id } = req.params;
       const userId = req.userId;
+      console.log(req.params);
       File.findOne({ userId: userId, trash: false, id: id, type: "file" })
         .then((data) => {
+          console.log(data);
           res.json({
             msg: { _id: data._id, storage: data.userId, name: data.name },
           });
         })
         .catch((err) => next(err));
     } catch (error) {
-      console.log("a");
+      if (!error.statusCode) {
+        error.statusCode = 500;
+      }
+      next(error);
     }
   });
 
