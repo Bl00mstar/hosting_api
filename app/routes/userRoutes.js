@@ -62,6 +62,20 @@ router.post(
   userController.onMockLogin
 );
 router.delete("/:id", auth, userController.onDeleteAccount);
+router.post(
+  "/:id",
+  [
+    body("email")
+      .isEmail()
+      .withMessage("Please Enter a valid email ID")
+      .normalizeEmail(),
+    body("firstName").trim().isLength({ min: 2 }).withMessage("Invalid data"),
+    body("lastName").trim().isLength({ min: 2 }).withMessage("Invalid data"),
+  ],
+  auth,
+  userController.changeUserData
+);
+
 /**
  * Handle Error
  */

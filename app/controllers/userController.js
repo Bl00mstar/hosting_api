@@ -20,10 +20,7 @@ exports.onSignup = (req, res, next) => {
     throw err;
   }
 
-  let email = req.body.email;
-  let password = req.body.password;
-  let firstName = req.body.firstName;
-  let lastName = req.body.lastName;
+  const { email, firstName, password, lastName } = req.body;
 
   bcrypt
     .hash(password, 12)
@@ -61,7 +58,7 @@ exports.onLogin = (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    const err = new Error("Invalid email or password.");
+    const err = new Error("Login failed.");
     err.statusCode = 422;
     err.data = errors.array();
     throw err;
@@ -72,7 +69,7 @@ exports.onLogin = (req, res, next) => {
   User.findOne({ email: email })
     .then((user) => {
       if (!user) {
-        const err = new Error("User Does not exist with the provided email");
+        const err = new Error("Login failed.");
         err.statusCode = 401;
         throw err;
       }
@@ -81,7 +78,7 @@ exports.onLogin = (req, res, next) => {
     })
     .then((result) => {
       if (!result) {
-        const err = new Error("Email or password is valid.");
+        const err = new Error("Login failed.");
         err.statusCode = 401;
         throw err;
       }
@@ -92,7 +89,7 @@ exports.onLogin = (req, res, next) => {
         { expiresIn: "90d" }
       );
 
-      res.status(200).json({ token: token, email: loginUser.email });
+      res.status(200).json({ token: token, user: loginUser });
     })
     .catch((err) => {
       if (!err.statusCode) {
@@ -118,7 +115,7 @@ exports.onMockLogin = (req, res, next) => {
   User.findOne({ email: email })
     .then((user) => {
       if (!user) {
-        const err = new Error("User Does not exist with the provided email ID");
+        const err = new Error("Login failed");
         err.statusCode = 401;
         throw err;
       }
@@ -160,12 +157,11 @@ exports.isAuthenticated = (req, res, next) => {
       const token = authorization.split(" ")[1];
 
       res.status(200).json({
-        email: data.email,
+        user: data,
         token: token,
       });
     })
     .catch((err) => {
-      console.log(err);
       if (!err.statusCode) {
         err.statusCode = 500;
       }
@@ -175,14 +171,11 @@ exports.isAuthenticated = (req, res, next) => {
 //mock
 exports.onDeleteAccount = (req, res, next) => {
   const userId = req.userId;
-  console.log(userId);
-
   User.deleteOne({ _id: userId })
     .then((result) => {
       res.status(200).json({ msg: "Account Deleted" });
     })
     .catch((err) => {
-      console.log(err);
       if (!err.statusCode) {
         err.statusCode = 500;
       }
@@ -190,9 +183,6 @@ exports.onDeleteAccount = (req, res, next) => {
     });
 };
 
-exports.onViewProfile = (req, res, next) => {};
-exports.onAddProfile = (req, res, next) => {};
-exports.onAddChoice = (req, res, next) => {};
 exports.onDeleteProfile = (req, res, next) => {
   const userId = req.userId;
   const profileId = req.params.id;
@@ -210,13 +200,71 @@ exports.onDeleteProfile = (req, res, next) => {
       res.status(200).json(result);
     })
     .catch((err) => {
-      console.log(err);
       if (!err.statusCode) {
         err.statusCode = 500;
       }
       next(err);
     });
 };
-exports.viewWatchlist = (req, res, next) => {};
-exports.addToWatchlist = (req, res, next) => {};
-exports.removeWatchlist = (req, res, next) => {};
+exports.changeUserData = async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const err = new Error("Please provide valid data.");
+    err.statusCode = 422;
+    err.data = errors.array();
+    throw err;
+  }
+  try {
+    const userId = req.userId;
+    const {
+      email,
+      firstName,
+      lastName,
+      newPassword,
+      confirmNewPassword,
+    } = req.body;
+
+    let data = await User.findOne({ email: email }).then((data) => {
+      return data;
+    });
+    if (email !== data.email) {
+      if (data !== null) {
+        const err = new Error("Email is already taken.");
+        err.statusCode = 422;
+        err.data = errors.array();
+        throw err;
+      }
+    }
+
+    if (newPassword === confirmNewPassword && newPassword != undefined) {
+      if (newPassword.length < 6) {
+        const err = new Error("New password is too short.");
+        err.statusCode = 422;
+        next(err);
+      }
+      bcrypt.hash(newPassword, 12).then((hashPassword) => {
+        User.findByIdAndUpdate(userId, {
+          $set: {
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            password: hashPassword,
+          },
+        })
+          .then(() => res.json({ msg: "Data changed." }))
+          .catch((err) => next(err));
+      });
+    } else {
+      User.findByIdAndUpdate(userId, {
+        $set: { email: email, firstName: firstName, lastName: lastName },
+      })
+        .then((data) => res.json({ msg: data }))
+        .catch((err) => next(err));
+    }
+  } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
+    next(error);
+  }
+};
