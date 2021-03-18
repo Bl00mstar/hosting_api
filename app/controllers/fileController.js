@@ -8,10 +8,61 @@ const fs = require("fs");
 const uuid = require("uuid");
 const path = require("path");
 const rimraf = require("rimraf");
+const glob = require("glob");
 const uploadPath = path.resolve(__dirname, "../../files/upload");
-const { getPath, getExtension, getFolders } = require("../utils/userPath");
+const {
+  getPath,
+  getExtension,
+  getFolders,
+  bytesToSize,
+} = require("../utils/userPath");
 
 module.exports = () => {
+  //get storage/trash statistics
+  router.route("/statistics/:type").get(async (req, res, next) => {
+    try {
+      const { type } = req.params;
+      const userId = req.userId;
+      const userPath = await User.findOne({ _id: userId }).then((data) => {
+        return data.rootFolder;
+      });
+      const statisticPath =
+        type === true
+          ? getPath(userPath, "/trash")
+          : getPath(userPath, "/storage");
+
+      File.find({
+        userId: userId,
+        type: "file",
+        trash: type,
+      }).then(async (data) => {
+        const sizedTrash = await Promise.all(
+          data.map((el) => {
+            return new Promise((resolve) => {
+              resolve(fs.statSync(statisticPath + el.path + el.name).size);
+            });
+          })
+        );
+
+        Promise.all(sizedTrash)
+          .then(() => {
+            const storageTrash = sizedTrash.reduce((a, b) => a + b, 0);
+            const usedSpace = bytesToSize(storageTrash);
+            res.json({
+              countFiles: sizedTrash.length,
+              totalStorage: usedSpace,
+            });
+          })
+          .catch((err) => next(err));
+      });
+    } catch (error) {
+      if (!error.statusCode) {
+        error.statusCode = 500;
+      }
+      next(error);
+    }
+  });
+
   //
   // move elements
 

@@ -1,5 +1,16 @@
 const config = require("config");
 module.exports = {
+  bytesToSize: (bytes) => {
+    let sizes = ["B", "KB", "MB", "GB", "TB", "PB"];
+    for (var i = 0; i < sizes.length; i++) {
+      if (bytes <= 1024) {
+        return bytes + " " + sizes[i];
+      } else {
+        bytes = parseFloat(bytes / 1024).toFixed(2);
+      }
+    }
+    return bytes + " P";
+  },
   getPath: (user, type) => {
     let pathToFolder = config.get("storagePath") + user + type;
     return pathToFolder;

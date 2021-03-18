@@ -12,6 +12,8 @@ const uploadPath = path.resolve(__dirname, "../../files/upload");
 const { getPath, getExtension, getFolders } = require("../utils/userPath");
 
 module.exports = () => {
+  //get storage
+  router.route("/storage").get(async (req, res, next) => {});
   // Trash files list
   router.route("/").get(async (req, res, next) => {
     try {
